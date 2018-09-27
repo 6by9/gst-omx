@@ -2170,6 +2170,13 @@ gst_omx_video_enc_set_format (GstVideoEncoder * encoder,
   port_def.format.video.nFrameWidth = info->width;
   port_def.format.video.nFrameHeight = info->height;
 
+  port_def.format.video.nStride = info->stride[0];
+  port_def.format.video.nSliceHeight = info->height;
+
+  if (klass->cdata.hacks & GST_OMX_HACK_HEIGHT_MULTIPLE_16)
+    port_def.format.video.nSliceHeight =
+        GST_ROUND_UP_16 (port_def.format.video.nSliceHeight);
+
   if (G_UNLIKELY (klass->cdata.hacks & GST_OMX_HACK_VIDEO_FRAMERATE_INTEGER))
     port_def.format.video.xFramerate =
         info->fps_n ? (info->fps_n) / (info->fps_d) : 0;
