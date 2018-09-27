@@ -1299,16 +1299,47 @@ gst_omx_video_enc_handle_output_frame (GstOMXVideoEnc * self, GstOMXPort * port,
 
     GST_DEBUG_OBJECT (self, "Handling output data");
 
-    if (buf->omx_buf->nFilledLen > 0) {
-      outbuf = gst_buffer_new_and_alloc (buf->omx_buf->nFilledLen);
+    if (!frame->output_buffer) {
+      if (buf->omx_buf->nFilledLen > 0) {
+        outbuf = gst_buffer_new_and_alloc (buf->omx_buf->nFilledLen);
 
-      gst_buffer_map (outbuf, &map, GST_MAP_WRITE);
-      memcpy (map.data,
-          buf->omx_buf->pBuffer + buf->omx_buf->nOffset,
-          buf->omx_buf->nFilledLen);
-      gst_buffer_unmap (outbuf, &map);
+        gst_buffer_map (outbuf, &map, GST_MAP_WRITE);
+        memcpy (map.data,
+            buf->omx_buf->pBuffer + buf->omx_buf->nOffset,
+            buf->omx_buf->nFilledLen);
+        gst_buffer_unmap (outbuf, &map);
+      } else {
+        outbuf = gst_buffer_new ();
+      }
     } else {
-      outbuf = gst_buffer_new ();
+      if (buf->omx_buf->nFilledLen > 0) {
+        GstMapInfo map_fragment = GST_MAP_INFO_INIT;
+
+        outbuf =
+            gst_buffer_new_and_alloc (gst_buffer_get_size (frame->output_buffer)
+            + buf->omx_buf->nFilledLen);
+
+        gst_buffer_map (outbuf, &map, GST_MAP_WRITE);
+
+        gst_buffer_map (frame->output_buffer, &map_fragment, GST_MAP_READ);
+        memcpy (map.data,
+            map_fragment.data, gst_buffer_get_size (frame->output_buffer));
+        gst_buffer_unmap (frame->output_buffer, &map_fragment);
+
+        memcpy (map.data + gst_buffer_get_size (frame->output_buffer),
+            buf->omx_buf->pBuffer + buf->omx_buf->nOffset,
+            buf->omx_buf->nFilledLen);
+        gst_buffer_unmap (outbuf, &map);
+
+        gst_buffer_unref (frame->output_buffer);
+        frame->output_buffer = NULL;
+      } else {
+        outbuf = frame->output_buffer;
+      }
+      // We didn't release the frame for the last partial fragment as
+      // it was still required, but we'll have gained a further reference
+      // with this call, so release it.
+      gst_video_codec_frame_unref (frame);
     }
 
     GST_BUFFER_TIMESTAMP (outbuf) =
@@ -1334,8 +1365,10 @@ gst_omx_video_enc_handle_output_frame (GstOMXVideoEnc * self, GstOMXPort * port,
 
     if (frame) {
       frame->output_buffer = outbuf;
-      flow_ret =
-          gst_video_encoder_finish_frame (GST_VIDEO_ENCODER (self), frame);
+      if (buf->omx_buf->nFlags & OMX_BUFFERFLAG_ENDOFFRAME) {
+        flow_ret =
+            gst_video_encoder_finish_frame (GST_VIDEO_ENCODER (self), frame);
+      }
     } else {
       GST_ERROR_OBJECT (self, "No corresponding frame found");
       flow_ret = gst_pad_push (GST_VIDEO_ENCODER_SRC_PAD (self), outbuf);
