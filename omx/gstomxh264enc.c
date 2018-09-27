@@ -641,6 +641,7 @@ gst_omx_h264_enc_set_format (GstOMXVideoEnc * enc, GstOMXPort * port,
   gst_omx_port_get_port_definition (GST_OMX_VIDEO_ENC (self)->enc_out_port,
       &port_def);
   port_def.format.video.eCompressionFormat = OMX_VIDEO_CodingAVC;
+  port_def.nBufferSize = 256 << 10;
   err =
       gst_omx_port_update_port_definition (GST_OMX_VIDEO_ENC
       (self)->enc_out_port, &port_def);
