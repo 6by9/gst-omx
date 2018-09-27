@@ -62,6 +62,9 @@ gst_omx_video_get_format_from_omx (OMX_COLOR_FORMATTYPE omx_colorformat)
     case OMX_COLOR_FormatCbYCrY:
       format = GST_VIDEO_FORMAT_UYVY;
       break;
+    case OMX_COLOR_FormatCrYCbY:
+      format = GST_VIDEO_FORMAT_VYUY;
+      break;
     case OMX_COLOR_Format32bitARGB8888:
       /* There is a mismatch in omxil specification 4.2.1 between
        * OMX_COLOR_Format32bitARGB8888 and its description
@@ -80,6 +83,9 @@ gst_omx_video_get_format_from_omx (OMX_COLOR_FORMATTYPE omx_colorformat)
       break;
     case OMX_COLOR_Format24bitBGR888:
       format = GST_VIDEO_FORMAT_BGR;
+      break;
+    case OMX_COLOR_Format24bitRGB888:
+      format = GST_VIDEO_FORMAT_RGB;
       break;
 #ifdef USE_OMX_TARGET_ZYNQ_USCALE_PLUS
       /* Formats defined in extensions have their own enum so disable to -Wswitch warning */

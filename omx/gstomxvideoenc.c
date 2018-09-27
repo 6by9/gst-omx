@@ -1208,6 +1208,7 @@ get_chroma_info_from_input (GstOMXVideoEnc * self, const gchar ** chroma_format,
     case GST_VIDEO_FORMAT_YUY2:
     case GST_VIDEO_FORMAT_YVYU:
     case GST_VIDEO_FORMAT_UYVY:
+    case GST_VIDEO_FORMAT_VYUY:
       *chroma_format = "4:2:2";
       *bit_depth_luma = *bit_depth_chroma = 8;
       break;
@@ -1819,6 +1820,16 @@ gst_omx_video_enc_configure_input_buffer (GstOMXVideoEnc * self,
           ((port_def.format.video.nFrameHeight + 1) / 2));
       break;
 
+    case OMX_COLOR_FormatYCbYCr:
+    case OMX_COLOR_FormatYCrYCb:
+    case OMX_COLOR_FormatCbYCrY:
+    case OMX_COLOR_FormatCrYCbY:
+    case OMX_COLOR_Format24bitRGB888:
+    case OMX_COLOR_Format24bitBGR888:
+      port_def.nBufferSize =
+          (port_def.format.video.nStride * port_def.format.video.nFrameHeight);
+      break;
+
 #ifdef USE_OMX_TARGET_ZYNQ_USCALE_PLUS
       /* Formats defined in extensions have their own enum so disable to -Wswitch warning */
 #pragma GCC diagnostic push
@@ -2118,6 +2129,24 @@ gst_omx_video_enc_set_format (GstVideoEncoder * encoder,
         break;
       case GST_VIDEO_FORMAT_ARGB:
         port_def.format.video.eColorFormat = OMX_COLOR_Format32bitBGRA8888;
+        break;
+      case GST_VIDEO_FORMAT_YUY2:
+        port_def.format.video.eColorFormat = OMX_COLOR_FormatYCbYCr;
+        break;
+      case GST_VIDEO_FORMAT_UYVY:
+        port_def.format.video.eColorFormat = OMX_COLOR_FormatCbYCrY;
+        break;
+      case GST_VIDEO_FORMAT_YVYU:
+        port_def.format.video.eColorFormat = OMX_COLOR_FormatYCrYCb;
+        break;
+      case GST_VIDEO_FORMAT_VYUY:
+        port_def.format.video.eColorFormat = OMX_COLOR_FormatCrYCbY;
+        break;
+      case GST_VIDEO_FORMAT_RGB:
+        port_def.format.video.eColorFormat = OMX_COLOR_Format24bitRGB888;
+        break;
+      case GST_VIDEO_FORMAT_BGR:
+        port_def.format.video.eColorFormat = OMX_COLOR_Format24bitBGR888;
         break;
       default:
         GST_ERROR_OBJECT (self, "Unsupported format %s",
@@ -2913,8 +2942,14 @@ filter_supported_formats (GList * negotiation_map)
       case GST_VIDEO_FORMAT_NV12:
       case GST_VIDEO_FORMAT_NV12_10LE32:
       case GST_VIDEO_FORMAT_NV16_10LE32:
-        //case GST_VIDEO_FORMAT_ABGR:
-        //case GST_VIDEO_FORMAT_ARGB:
+      case GST_VIDEO_FORMAT_YUY2:
+      case GST_VIDEO_FORMAT_YVYU:
+      case GST_VIDEO_FORMAT_UYVY:
+      case GST_VIDEO_FORMAT_VYUY:
+      case GST_VIDEO_FORMAT_ABGR:
+      case GST_VIDEO_FORMAT_ARGB:
+      case GST_VIDEO_FORMAT_RGB:
+      case GST_VIDEO_FORMAT_BGR:
         cur = g_list_next (cur);
         continue;
       default:
